@@ -57,5 +57,26 @@
             android:id="@+id/contours"
             android:contentDescription="@string/some_image" />
 
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_launcher_foreground"
+            android:id="@+id/adapThreshold"
+            android:contentDescription="@string/some_image" />
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_launcher_foreground"
+            android:id="@+id/erode"
+            android:contentDescription="@string/some_image" />
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_launcher_foreground"
+            android:id="@+id/img3"
+            android:contentDescription="@string/some_image" />
+
     </LinearLayout>
 </ScrollView>

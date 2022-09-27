@@ -2,6 +2,7 @@ package com.qrfinder.opencv;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.math.MathUtils;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -76,8 +77,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public Bitmap findCode(Bitmap bmp) {
+//        initialize *******************************************************************************
         Mat mat = new Mat();
         List<MatOfPoint> contourArr = new ArrayList<>();
+        List<MatOfPoint> contourArr2 = new ArrayList<>();
+        List<MatOfPoint> patterns = new ArrayList<>();
         Utils.bitmapToMat(bmp, mat);
 
         Mat gray = new Mat();
@@ -86,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
         connected = new Mat();
         mat.copyTo(img2);
 
+//        find QR code *****************************************************************************
         Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY);
 
         Mat kernel1 = Mat.ones(3,3, Imgproc.MORPH_ELLIPSE);
@@ -98,18 +103,6 @@ public class MainActivity extends AppCompatActivity {
 
         Mat hierarchy = new Mat();
         Imgproc.findContours(connected, contourArr, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
-
-//        Iterator<MatOfPoint> each = contourArr.iterator();
-//        each = contourArr.iterator();
-//        while (each.hasNext()) {
-//            MatOfPoint contour = each.next();
-//            Rect rect = Imgproc.boundingRect(contour);
-////            Imgproc.minAreaRect(img2, rect);
-//            if (rect.height < 7 && rect.width < 7) {
-//                Imgproc.rectangle(img2, rect.tl(), rect.br(), new Scalar(255,
-//                        0, 0), 1);
-//            }
-//        }
 
         //https://www.tabnine.com/code/java/methods/org.opencv.imgproc.Imgproc/minAreaRect?snippet=5ce706c17e034400044022f7
         for (int i = 0; i < contourArr.size(); i++) {
@@ -136,6 +129,40 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+//        find position patterns *******************************************************************
+        Mat adapThresh = new Mat();
+        Mat erodeMat = new Mat();
+        Mat edgesMat = new Mat();
+        Mat img3 = new Mat();
+        mat.copyTo(img3);
+        Imgproc.adaptiveThreshold(gray,adapThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 51, 0 );
+
+        // todo: fin right kernel CV (uint8 ?)
+        Mat kernel3 = Mat.ones(5,5, CvType.CV_8UC1);
+        Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
+        Imgproc.Canny(erodeMat, edgesMat, 50, 200);
+
+        Mat hierarchy2 = new Mat();
+        Imgproc.findContours(edgesMat, contourArr2, hierarchy2, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+
+        for (MatOfPoint contour : contourArr2) {
+            MatOfPoint2f contourFloat = toMatOfPointFloat(contour);
+            double arcLen = Imgproc.arcLength(contourFloat, true) * 0.03;
+
+            MatOfPoint2f approx = new MatOfPoint2f();
+            Imgproc.approxPolyDP(contourFloat, approx, arcLen, true);
+
+            Log.d("SIZE", String.valueOf(approx.size()));
+            if (approx.toArray().length == 4) {
+                Rect rect = Imgproc.boundingRect(contour);
+                if (rect.height > 7 && rect.width > 7 && isClose(rect.height, rect.width, (float) 0.1)) {
+                    Imgproc.rectangle(img3, rect, new Scalar(36, 255, 12), 3);
+                    patterns.add(contour);
+                }
+            }
+        }
+
+//        display images ***************************************************************************
         ImageView grayImg = findViewById(R.id.gray);
         Bitmap bmpGray = Bitmap.createBitmap(gray.cols(), gray.rows(), Bitmap.Config.RGB_565);
         Utils.matToBitmap(gray, bmpGray);
@@ -156,12 +183,35 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(img2, contoursBmp);
         contoursImg.setImageBitmap(contoursBmp);
 
+        ImageView adapImg = findViewById(R.id.adapThreshold);
+        Bitmap adapBmp = Bitmap.createBitmap(adapThresh.cols(), adapThresh.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(adapThresh, adapBmp);
+        adapImg.setImageBitmap(adapBmp);
+
+        ImageView erodeImg = findViewById(R.id.erode);
+        Bitmap erodeBmp = Bitmap.createBitmap(edgesMat.cols(), edgesMat.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(edgesMat, erodeBmp);
+        erodeImg.setImageBitmap(erodeBmp);
+
+        ImageView threeImg = findViewById(R.id.img3);
+        Bitmap threeBmp = Bitmap.createBitmap(img3.cols(), img3.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(img3, threeBmp);
+        threeImg.setImageBitmap(threeBmp);
+
         return bmp;
+    }
+
+//    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
+    public static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
+        MatOfPoint2f matFloat = new MatOfPoint2f();
+        mat.convertTo(matFloat, CvType.CV_32FC2);
+        return matFloat;
     }
 
     private boolean isClose(float height, float width, float absolute) {
         float diff1 = width/height;
         float diff2 = height/width;
+//        https://stackoverflow.com/a/26740680
         return Float.intBitsToFloat(Float.floatToIntBits(diff1 - diff2) & 0x7FFFFFFF) < absolute;
     }
 }
