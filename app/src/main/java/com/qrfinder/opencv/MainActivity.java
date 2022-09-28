@@ -15,6 +15,7 @@ import android.widget.ImageView;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -28,6 +29,7 @@ import org.opencv.imgproc.Imgproc;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -37,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView original_image;
     int SELECT_CODE = 12;
 
-    Mat grad, connected, thresh;
+    Mat grad, connected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,16 +153,66 @@ public class MainActivity extends AppCompatActivity {
 
             MatOfPoint2f approx = new MatOfPoint2f();
             Imgproc.approxPolyDP(contourFloat, approx, arcLen, true);
+            Point[] points = approx.toArray();
 
-            Log.d("SIZE", String.valueOf(approx.size()));
-            if (approx.toArray().length == 4) {
+            Log.d("SIZE", String.valueOf(approx.toArray().length));
+            if (points.length == 4) {
+                Log.d("SIZE_int", String.valueOf(points));
                 Rect rect = Imgproc.boundingRect(contour);
                 if (rect.height > 7 && rect.width > 7 && isClose(rect.height, rect.width, (float) 0.1)) {
                     Imgproc.rectangle(img3, rect, new Scalar(36, 255, 12), 3);
                     patterns.add(contour);
+//                    patterns.add(rect);
                 }
             }
         }
+
+//        verify patterns **************************************************************************
+        Mat imgH = new Mat();
+        Mat imgV = new Mat();
+        mat.copyTo(imgH);
+        mat.copyTo(imgV);
+
+//        Mat dibw8u = new Mat(gray.size(), CvType.CV_8U);
+//        gray.convertTo(dibw8u, CvType.CV_8U);
+
+//        for (int i = 0; i < patterns.size(); i++) {
+        for (MatOfPoint i : patterns) {
+//            MatOfPoint2f c2f = new MatOfPoint2f(i.toArray());
+//            double peri = Imgproc.arcLength(c2f, true);
+//            MatOfPoint2f approx = new MatOfPoint2f();
+//            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+
+//            Point[] points = approx.toArray();
+//            Log.d("SCANNER", "approx size: " + points.length);
+//            Log.d("SCANNER_p", Arrays.toString(points));
+            Rect rect = Imgproc.boundingRect(i);
+            int x = rect.x;
+            int x0 = x;
+            int y = rect.y;
+            int y0 = y;
+            int w = rect.width;
+            int h = rect.height;
+            Log.d("RECT_hu", String.valueOf(x)+String.valueOf(y)+String.valueOf(w)+String.valueOf(h));
+
+            Imgproc.rectangle(img3, rect, new Scalar(255, 36, 12), 3);
+//            Log.d("huluvu", String.valueOf(gray.get(y, x)));
+            double[] vec = adapThresh.get(y, x);
+            int x1 = (int)vec[0];
+//
+            Log.d("RECT_he", String.valueOf(x1));//Arrays.toString(vec));
+
+//            Point start = new Point(x1, y1);
+//            Point end = new Point(x2, y2);
+//            Imgproc.line(img3, start, end, new Scalar(255,0,0), 3);
+
+//            MatOfPoint2f pattern = new MatOfPoint2f(patterns.get(i).toArray());
+//            MatOfPoint pattern2 = toMatOfPointInt(pattern);
+////            int x = patterns[i][0];
+//            Log.d("patternN", String.valueOf(pattern));
+//            Log.d("patternN", String.valueOf(pattern2));
+        }
+
 
 //        display images ***************************************************************************
         ImageView grayImg = findViewById(R.id.gray);
