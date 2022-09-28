@@ -2,7 +2,6 @@ package com.qrfinder.opencv;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.math.MathUtils;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -15,7 +14,6 @@ import android.widget.ImageView;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -30,7 +28,6 @@ import org.opencv.imgproc.Imgproc;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -84,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
         List<MatOfPoint> contourArr = new ArrayList<>();
         List<MatOfPoint> contourArr2 = new ArrayList<>();
         List<MatOfPoint> patterns = new ArrayList<>();
+        List<MatOfPoint> patternsVer1 = new ArrayList<>();
+        List<MatOfPoint> patternsVer2 = new ArrayList<>();
         Utils.bitmapToMat(bmp, mat);
 
         Mat gray = new Mat();
@@ -157,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d("SIZE", String.valueOf(approx.toArray().length));
             if (points.length == 4) {
-                Log.d("SIZE_int", String.valueOf(points));
+                Log.d("SIZE_int", Arrays.toString(points));
                 Rect rect = Imgproc.boundingRect(contour);
                 if (rect.height > 7 && rect.width > 7 && isClose(rect.height, rect.width, (float) 0.1)) {
                     Imgproc.rectangle(img3, rect, new Scalar(36, 255, 12), 3);
@@ -173,46 +172,95 @@ public class MainActivity extends AppCompatActivity {
         mat.copyTo(imgH);
         mat.copyTo(imgV);
 
-//        Mat dibw8u = new Mat(gray.size(), CvType.CV_8U);
-//        gray.convertTo(dibw8u, CvType.CV_8U);
-
-//        for (int i = 0; i < patterns.size(); i++) {
         for (MatOfPoint i : patterns) {
-//            MatOfPoint2f c2f = new MatOfPoint2f(i.toArray());
-//            double peri = Imgproc.arcLength(c2f, true);
-//            MatOfPoint2f approx = new MatOfPoint2f();
-//            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
 
-//            Point[] points = approx.toArray();
-//            Log.d("SCANNER", "approx size: " + points.length);
-//            Log.d("SCANNER_p", Arrays.toString(points));
             Rect rect = Imgproc.boundingRect(i);
             int x = rect.x;
             int x0 = x;
-            int y = rect.y;
-            int y0 = y;
+            int y0 = rect.y;
+            int y = y0 + rect.height/2;
             int w = rect.width;
             int h = rect.height;
-            Log.d("RECT_hu", String.valueOf(x)+String.valueOf(y)+String.valueOf(w)+String.valueOf(h));
-
-            Imgproc.rectangle(img3, rect, new Scalar(255, 36, 12), 3);
-//            Log.d("huluvu", String.valueOf(gray.get(y, x)));
+            float x1, x2, x3, x4, x5, x6;
+            int[] ans;
+/*
+            how to get the value of a pixel in an image
             double[] vec = adapThresh.get(y, x);
             int x1 = (int)vec[0];
-//
-            Log.d("RECT_he", String.valueOf(x1));//Arrays.toString(vec));
+*/
+            int n = (int)adapThresh.get(y, x)[0];
+            Log.d("RECT_he", String.valueOf(n));
 
-//            Point start = new Point(x1, y1);
-//            Point end = new Point(x2, y2);
-//            Imgproc.line(img3, start, end, new Scalar(255,0,0), 3);
+            if((int)adapThresh.get(y, x)[0] == 255) {
+                ans = arrayLoop(adapThresh, y, x0, "x", 0);
+                x1 = ans[0];x0 = ans[1];
+            } else {x1 = 0;}
 
-//            MatOfPoint2f pattern = new MatOfPoint2f(patterns.get(i).toArray());
-//            MatOfPoint pattern2 = toMatOfPointInt(pattern);
-////            int x = patterns[i][0];
-//            Log.d("patternN", String.valueOf(pattern));
-//            Log.d("patternN", String.valueOf(pattern2));
+            ans = arrayLoop(adapThresh, y, x0, "x", 255);//black   1
+            x2 = ans[0];x0 = ans[1];
+            ans = arrayLoop(adapThresh, y, x0, "x", 0);//white     1
+            x3 = ans[0];x0 = ans[1];
+            ans = arrayLoop(adapThresh, y, x0, "x", 255);//black   3
+            x4 = ans[0];x0 = ans[1];
+            ans = arrayLoop(adapThresh, y, x0, "x", 0);//white     1
+            x5 = ans[0];x0 = ans[1];
+            ans = arrayLoop(adapThresh, y, x0, "x", 255);//black   1
+            x6 = ans[0];x0 = ans[1];
+
+            boolean r1 = isClose(x2, x3, 2);
+            boolean r2 = isClose(x5, x6, 2);
+            boolean r3 = isClose((x2+x3)/2, x4/3, 2);
+            boolean r4 = isClose((x5+x6)/2, x4/3, 2);
+
+            Imgproc.rectangle(imgH, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
+            Imgproc.rectangle(imgH, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
+
+            if (r1 && r2 && r3 && r4) {
+                Imgproc.rectangle(imgV, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
+                Imgproc.rectangle(imgV, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
+                patternsVer1.add(i);
+            }
         }
 
+        for (MatOfPoint i:patternsVer1) {
+            Rect rect = Imgproc.boundingRect(i);
+            int x0 = rect.x;
+            int x = x0 + rect.width/2;
+            int y0 = rect.y;
+            int y = y0;
+            int w = rect.width;
+            int h = rect.height;
+            float y1, y2, y3, y4, y5, y6;
+            int[] ans;
+
+            if((int)adapThresh.get(y, x)[0] == 255) {
+                ans = arrayLoop(adapThresh, y, x0, "y", 0);
+                y1 = ans[0];y0 = ans[1];
+            } else {y1 = 0;}
+
+            ans = arrayLoop(adapThresh, y0, x, "y", 255);//black   1
+            y2 = ans[0];y0 = ans[1];
+            ans = arrayLoop(adapThresh, y0, x, "y", 0);//white     1
+            y3 = ans[0];y0 = ans[1];
+            ans = arrayLoop(adapThresh, y0, x, "y", 255);//black   3
+            y4 = ans[0];y0 = ans[1];
+            ans = arrayLoop(adapThresh, y0, x, "y", 0);//white     1
+            y5 = ans[0];y0 = ans[1];
+            ans = arrayLoop(adapThresh, y0, x, "y", 255);//black   1
+            y6 = ans[0];y0 = ans[1];
+
+            boolean r1 = isClose(y2, y3, 2);
+            boolean r2 = isClose(y5, y6, 2);
+            boolean r3 = isClose((y2+y3)/2, y4/3, 2);
+            boolean r4 = isClose((y5+y6)/2, y4/3, 2);
+
+            if (r1 && r2 && r3 && r4) {
+                patternsVer2.add(i);
+                Imgproc.rectangle(imgV, new Point(x, y), new Point(x, y + h), new Scalar(12, 0, 255), 3);
+                Imgproc.rectangle(imgV, new Point(x0, y), new Point(x0 + w, y + h), new Scalar(36,255,12), 3);
+            }
+
+        }
 
 //        display images ***************************************************************************
         ImageView grayImg = findViewById(R.id.gray);
@@ -250,6 +298,16 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(img3, threeBmp);
         threeImg.setImageBitmap(threeBmp);
 
+        ImageView ImgHH = findViewById(R.id.imgH);
+        Bitmap BmpH = Bitmap.createBitmap(imgH.cols(), imgH.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(imgH, BmpH);
+        ImgHH.setImageBitmap(BmpH);
+
+        ImageView ImgVV = findViewById(R.id.imgV);
+        Bitmap BmpV = Bitmap.createBitmap(imgV.cols(), imgV.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(imgV, BmpV);
+        ImgVV.setImageBitmap(BmpV);
+
         return bmp;
     }
 
@@ -260,10 +318,27 @@ public class MainActivity extends AppCompatActivity {
         return matFloat;
     }
 
-    private boolean isClose(float height, float width, float absolute) {
-        float diff1 = width/height;
-        float diff2 = height/width;
+    private boolean isClose(float num1, float num2, float absolute) {
+        float diff1 = num2/num1;
+        float diff2 = num1/num2;
 //        https://stackoverflow.com/a/26740680
         return Float.intBitsToFloat(Float.floatToIntBits(diff1 - diff2) & 0x7FFFFFFF) < absolute;
+    }
+
+    private static int[] arrayLoop(Mat bin, int posY, int posX, String a, int change) {
+        int[] ans = new int[2];
+        int length = 0;
+        int ret = 0;
+        while ((int)bin.get(posY, posX)[0] != change) {
+            length ++;
+            if (a.equals("x")) {posX ++;
+            } else if (a.equals("y")) {posY ++;}
+        }
+
+        if (a.equals("x")) {ret = posX;}
+        else if (a.equals("y")) {ret = posY;}
+        ans[0] = length;
+        ans[1] = ret;
+        return ans;
     }
 }
