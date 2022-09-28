@@ -139,7 +139,8 @@ public class MainActivity extends AppCompatActivity {
         Imgproc.adaptiveThreshold(gray,adapThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 51, 0 );
 
         // todo: fin right kernel CV (uint8 ?)
-        Mat kernel3 = Mat.ones(5,5, CvType.CV_8UC1);
+        int u = 0;
+        Mat kernel3 = Mat.ones(5,5, u);
         Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
         Imgproc.Canny(erodeMat, edgesMat, 50, 200);
 
@@ -226,15 +227,15 @@ public class MainActivity extends AppCompatActivity {
             Rect rect = Imgproc.boundingRect(i);
             int x0 = rect.x;
             int x = x0 + rect.width/2;
-            int y0 = rect.y;
-            int y = y0;
+            int y = rect.y;
+            int y0 = y;
             int w = rect.width;
             int h = rect.height;
             float y1, y2, y3, y4, y5, y6;
             int[] ans;
 
             if((int)adapThresh.get(y, x)[0] == 255) {
-                ans = arrayLoop(adapThresh, y, x0, "y", 0);
+                ans = arrayLoop(adapThresh, y0, x, "y", 0);
                 y1 = ans[0];y0 = ans[1];
             } else {y1 = 0;}
 
@@ -261,6 +262,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
+
+//        verify QR-Code ***************************************************************************
+
+
 
 //        display images ***************************************************************************
         ImageView grayImg = findViewById(R.id.gray);
