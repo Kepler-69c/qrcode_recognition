@@ -28,7 +28,9 @@ import org.opencv.imgproc.Imgproc;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
     Button select;
@@ -78,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     public Bitmap findCode(Bitmap bmp) {
 //        initialize *******************************************************************************
         Mat mat = new Mat();
-        List<MatOfPoint> contourArr = new ArrayList<>();
+        List<MatOfPoint> qrArr = new ArrayList<>();
         List<MatOfPoint> contourArr2 = new ArrayList<>();
         List<MatOfPoint> patterns = new ArrayList<>();
         List<MatOfPoint> patternsVer1 = new ArrayList<>();
@@ -103,12 +105,12 @@ public class MainActivity extends AppCompatActivity {
         Imgproc.morphologyEx(grad, connected, Imgproc.MORPH_CLOSE, kernel2);
 
         Mat hierarchy = new Mat();
-        Imgproc.findContours(connected, contourArr, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+        Imgproc.findContours(connected, qrArr, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
         //https://www.tabnine.com/code/java/methods/org.opencv.imgproc.Imgproc/minAreaRect?snippet=5ce706c17e034400044022f7
-        for (int i = 0; i < contourArr.size(); i++) {
+        for (int i = 0; i < qrArr.size(); i++) {
             MatOfPoint2f contour_ = new MatOfPoint2f();
-            contourArr.get(i).convertTo(contour_, CvType.CV_32FC2);
+            qrArr.get(i).convertTo(contour_, CvType.CV_32FC2);
             if (contour_.empty()) {continue;}
 
             RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
@@ -125,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
                 Imgproc.drawContours(img2, boxContours, 0, new Scalar(128, 128, 128), 3);
 
             } else {
-                contourArr.remove(i);
+                qrArr.remove(i);
                 i--;
             }
         }
@@ -138,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         mat.copyTo(img3);
         Imgproc.adaptiveThreshold(gray,adapThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 51, 0 );
 
-        // todo: fin right kernel CV (uint8 ?)
+//        https://stackoverflow.com/a/14071387
         int u = 0;
         Mat kernel3 = Mat.ones(5,5, u);
         Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
@@ -185,12 +187,14 @@ public class MainActivity extends AppCompatActivity {
             float x1, x2, x3, x4, x5, x6;
             int[] ans;
 /*
-            how to get the value of a pixel in an image
+             -> how to get the value of a pixel in a Mat:
             double[] vec = adapThresh.get(y, x);
             int x1 = (int)vec[0];
-*/
+
+            -> shorter:
             int n = (int)adapThresh.get(y, x)[0];
             Log.d("RECT_he", String.valueOf(n));
+*/
 
             if((int)adapThresh.get(y, x)[0] == 255) {
                 ans = arrayLoop(adapThresh, y, x0, "x", 0);
@@ -264,7 +268,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
 //        verify QR-Code ***************************************************************************
+        List<MatOfPoint> qrTemp = new ArrayList<>();
 
+        for (MatOfPoint i:qrArr) {
+            Rect QrRect = Imgproc.boundingRect(i);
+
+            for (MatOfPoint j:patternsVer2) {
+                Rect PatternRect = Imgproc.boundingRect(j);
+                int xp = PatternRect.x + PatternRect.width/2;
+                int yp = PatternRect.y + PatternRect.height/2;
+
+//                java.avt.Polygon();
+                boolean contain = QrRect.contains(new Point(xp, yp));
+                if (contain) {
+                    qrTemp.add(i);
+                }
+            }
+        }
+
+        Set<MatOfPoint> qrVerified = new LinkedHashSet<>(qrTemp);
 
 
 //        display images ***************************************************************************
