@@ -286,8 +286,33 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Set<MatOfPoint> qrVerified = new LinkedHashSet<>(qrTemp);
+        Set<MatOfPoint> qrUniq = new LinkedHashSet<>(qrTemp);
+        List<MatOfPoint> qrVerified= new ArrayList<>();
+        qrVerified.addAll(qrUniq);
+//      TODO: Imgproc.rectangle -> show qr Code
 
+//        cut code *********************************************************************************
+        Mat qrImg = new Mat(400, 400, mat.type());
+        if (qrVerified.size() == 1) {
+//            Mat src = new MatOfPoint2f(new Point(x1, y1), new Point(x2, y2), new Point(x3, y3), new Point(x4, y4));
+
+
+            MatOfPoint2f contour_ = new MatOfPoint2f();
+            qrVerified.get(0).convertTo(contour_, CvType.CV_32FC2);
+
+            RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
+            Point[] vertices = new Point[4];
+            rotatedRect.points(vertices);
+//            List<MatOfPoint2f> boxContours = new ArrayList<>();
+//            boxContours.add(new MatOfPoint2f(vertices));
+            Mat src = new MatOfPoint2f(vertices);
+            Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
+
+            Mat transform = Imgproc.getPerspectiveTransform(src, dst);
+            Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
+        } else {
+            mat.copyTo(qrImg);
+        }
 
 //        display images ***************************************************************************
         ImageView grayImg = findViewById(R.id.gray);
@@ -335,10 +360,16 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(imgV, BmpV);
         ImgVV.setImageBitmap(BmpV);
 
+        ImageView ImgQR = findViewById(R.id.qrimg);
+        Bitmap BmpQR = Bitmap.createBitmap(qrImg.cols(), qrImg.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(qrImg, BmpQR);
+        ImgQR.setImageBitmap(BmpQR);
+
+        Utils.matToBitmap(qrImg, bmp);
         return bmp;
     }
 
-//    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
+    //    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
     public static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
         MatOfPoint2f matFloat = new MatOfPoint2f();
         mat.convertTo(matFloat, CvType.CV_32FC2);
