@@ -286,28 +286,24 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Set<MatOfPoint> qrUniq = new LinkedHashSet<>(qrTemp);
-        List<MatOfPoint> qrVerified= new ArrayList<>();
-        qrVerified.addAll(qrUniq);
+        Set<MatOfPoint> qrUni = new LinkedHashSet<>(qrTemp);
+        List<MatOfPoint> qrVerified = new ArrayList<>(qrUni);
 //      TODO: Imgproc.rectangle -> show qr Code
 
 //        cut code *********************************************************************************
         Mat qrImg = new Mat(400, 400, mat.type());
         if (qrVerified.size() == 1) {
-//            Mat src = new MatOfPoint2f(new Point(x1, y1), new Point(x2, y2), new Point(x3, y3), new Point(x4, y4));
-
-
             MatOfPoint2f contour_ = new MatOfPoint2f();
             qrVerified.get(0).convertTo(contour_, CvType.CV_32FC2);
 
             RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
             Point[] vertices = new Point[4];
             rotatedRect.points(vertices);
-//            List<MatOfPoint2f> boxContours = new ArrayList<>();
-//            boxContours.add(new MatOfPoint2f(vertices));
+//            https://stackoverflow.com/a/36058630
             Mat src = new MatOfPoint2f(vertices);
             Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
 
+//            TODO: replace built-in function
             Mat transform = Imgproc.getPerspectiveTransform(src, dst);
             Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
         } else {
