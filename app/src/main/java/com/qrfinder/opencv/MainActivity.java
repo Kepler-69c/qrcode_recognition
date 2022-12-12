@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
@@ -25,6 +26,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -361,7 +363,18 @@ public class MainActivity extends AppCompatActivity {
         Utils.matToBitmap(qrImg, BmpQR);
         ImgQR.setImageBitmap(BmpQR);
 
-        Utils.matToBitmap(qrImg, bmp);
+//        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//        String filename = "teste.png";
+//        File file = new File(path, filename);
+//        filename = file.toString();
+//        Highgui.imwrite(filename, mRgba);
+//        MediaStore.Images.Media.insertImage(getContentResolver(), BmpH, "hello2" , "just some image");
+
+        Size sz = new Size(bmp.getWidth(), bmp.getHeight());
+        Imgproc.resize(qrImg, qrImg, sz);
+
+        Bitmap qrBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(qrImg, qrBmp);
         return bmp;
     }
 
