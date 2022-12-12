@@ -1,13 +1,18 @@
 package com.qrfinder.opencv;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.text.BoringLayout;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -25,6 +30,7 @@ import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.w3c.dom.Comment;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         if (OpenCVLoader.initDebug()) Log.d("LOADED", "SUCCESS");
-        
+
         select = findViewById(R.id.select);
         select.setOnClickListener(this::onClick);
 
@@ -79,15 +85,43 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public static class qrCode {
+        private boolean confirmed = false;
+        private Mat cut, gray, adapThresh;
+        private MatOfPoint code = new MatOfPoint();
+        private List<MatOfPoint> nPatterns = new ArrayList<>();
+        private List<MatOfPoint> vPatterns = new ArrayList<>();
+
+        private Mat makeGray(Mat mat) {
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
+            return mat;
+        }
+
+        private Mat aThresh(Mat mat) {
+            Imgproc.adaptiveThreshold(mat, mat, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 51, 0);
+            return mat;
+        }
+
+        public qrCode(Mat cut, MatOfPoint code) {
+            this.cut = cut;
+            this.code = code;
+            this.gray = makeGray(cut);
+            this.adapThresh = aThresh(gray);
+            this.nPatterns = findPatterns(cut, adapThresh);
+            this.vPatterns = verifyPatters(cut, adapThresh, nPatterns);
+            this.confirmed = verifyCode(code, nPatterns);
+
+        }
+
+    }
+
+
     public Bitmap findCode(Bitmap bmp) {
 //        initialize *******************************************************************************
         Mat mat = new Mat();
-        List<MatOfPoint> qrArr = new ArrayList<>();
-        List<MatOfPoint> contourArr2 = new ArrayList<>();
-        List<MatOfPoint> patterns = new ArrayList<>();
-        List<MatOfPoint> patternsVer1 = new ArrayList<>();
-        List<MatOfPoint> patternsVer2 = new ArrayList<>();
         Utils.bitmapToMat(bmp, mat);
+
+        List<MatOfPoint> qrArr = new ArrayList<>();
 
         Mat gray = new Mat();
         Mat img2 = new Mat();
@@ -115,36 +149,101 @@ public class MainActivity extends AppCompatActivity {
             qrArr.get(i).convertTo(contour_, CvType.CV_32FC2);
             if (contour_.empty()) {continue;}
 
-            RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
             Rect rect = Imgproc.boundingRect(contour_);
 
             if (rect.height > 7 && rect.width > 7 && isClose(rect.height, rect.width, (float) 0.1)) {
-//                Imgproc.rectangle(img2, rect, new Scalar(0, 255, 0), 3);
+                Mat cut = cutAndTransform(mat, contour_);
+                MatOfPoint code = qrArr.get(i);
+                qrCode qrcode = new qrCode(cut, code);
 
-//                https://stackoverflow.com/a/26026580
-                Point[] vertices = new Point[4];
-                rotatedRect.points(vertices);
-                List<MatOfPoint> boxContours = new ArrayList<>();
-                boxContours.add(new MatOfPoint(vertices));
-                Imgproc.drawContours(img2, boxContours, 0, new Scalar(128, 128, 128), 3);
-
-            } else {
-                qrArr.remove(i);
-                i--;
+                if (qrcode.confirmed) {
+                    ImageView ImgQR = findViewById(R.id.qrimg);
+                    Bitmap BmpQR = Bitmap.createBitmap(cut.cols(), cut.rows(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(cut, BmpQR);
+                    ImgQR.setImageBitmap(BmpQR);
+                }
             }
         }
 
-//        find position patterns *******************************************************************
-        Mat adapThresh = new Mat();
+//        display images ***************************************************************************
+//        ImageView grayImg = findViewById(R.id.gray);
+//        Bitmap bmpGray = Bitmap.createBitmap(gray.cols(), gray.rows(), Bitmap.Config.RGB_565);
+//        Utils.matToBitmap(gray, bmpGray);
+//        grayImg.setImageBitmap(bmpGray);
+//
+//        ImageView gradImg = findViewById(R.id.grad);
+//        Bitmap bmpGrad = Bitmap.createBitmap(grad.cols(), grad.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(grad, bmpGrad);
+//        gradImg.setImageBitmap(bmpGrad);
+//
+//        ImageView connImg = findViewById(R.id.connected);
+//        Bitmap bmpConn = Bitmap.createBitmap(connected.cols(), connected.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(connected, bmpConn);
+//        connImg.setImageBitmap(bmpConn);
+//
+//        ImageView contoursImg = findViewById(R.id.contours);
+//        Bitmap contoursBmp = Bitmap.createBitmap(img2.cols(), img2.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(img2, contoursBmp);
+//        contoursImg.setImageBitmap(contoursBmp);
+//
+//        ImageView adapImg = findViewById(R.id.adapThreshold);
+//        Bitmap adapBmp = Bitmap.createBitmap(adapThresh.cols(), adapThresh.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(adapThresh, adapBmp);
+//        adapImg.setImageBitmap(adapBmp);
+//
+//        ImageView erodeImg = findViewById(R.id.erode);
+//        Bitmap erodeBmp = Bitmap.createBitmap(edgesMat.cols(), edgesMat.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(edgesMat, erodeBmp);
+//        erodeImg.setImageBitmap(erodeBmp);
+//
+//        ImageView threeImg = findViewById(R.id.img3);
+//        Bitmap threeBmp = Bitmap.createBitmap(img3.cols(), img3.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(img3, threeBmp);
+//        threeImg.setImageBitmap(threeBmp);
+//
+//        ImageView ImgHH = findViewById(R.id.imgH);
+//        Bitmap BmpH = Bitmap.createBitmap(imgH.cols(), imgH.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(imgH, BmpH);
+//        ImgHH.setImageBitmap(BmpH);
+//
+//        ImageView ImgVV = findViewById(R.id.imgV);
+//        Bitmap BmpV = Bitmap.createBitmap(imgV.cols(), imgV.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(imgV, BmpV);
+//        ImgVV.setImageBitmap(BmpV);
+//
+//        ImageView ImgQR = findViewById(R.id.qrimg);
+//        Bitmap BmpQR = Bitmap.createBitmap(qrImg.cols(), qrImg.rows(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(qrImg, BmpQR);
+//        ImgQR.setImageBitmap(BmpQR);
+
+//        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//        String filename = "teste.png";
+//        File file = new File(path, filename);
+//        filename = file.toString();
+//        Highgui.imwrite(filename, mRgba);
+//        MediaStore.Images.Media.insertImage(getContentResolver(), BmpH, "hello2" , "just some image");
+
+//        Size sz = new Size(bmp.getWidth(), bmp.getHeight());
+//        Imgproc.resize(qrImg, qrImg, sz);
+//
+//        Bitmap qrBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(qrImg, qrBmp);
+//        return bmp;
+
+        return bmp;
+    }
+
+    private static List<MatOfPoint> findPatterns(Mat mat, Mat adapThresh) {
+        List<MatOfPoint> contourArr2 = new ArrayList<>();
+        List<MatOfPoint> patterns = new ArrayList<>();
         Mat erodeMat = new Mat();
         Mat edgesMat = new Mat();
         Mat img3 = new Mat();
         mat.copyTo(img3);
-        Imgproc.adaptiveThreshold(gray,adapThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 51, 0 );
 
-//        https://stackoverflow.com/a/14071387
+        //        https://stackoverflow.com/a/14071387
         int u = 0;
-        Mat kernel3 = Mat.ones(5,5, u);
+        Mat kernel3 = Mat.ones(5, 5, u);
         Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
         Imgproc.Canny(erodeMat, edgesMat, 50, 200);
 
@@ -166,14 +265,20 @@ public class MainActivity extends AppCompatActivity {
                 if (rect.height > 7 && rect.width > 7 && isClose(rect.height, rect.width, (float) 0.1)) {
                     Imgproc.rectangle(img3, rect, new Scalar(36, 255, 12), 3);
                     patterns.add(contour);
-//                    patterns.add(rect);
                 }
             }
         }
 
-//        verify patterns **************************************************************************
+        return patterns;
+    }
+
+    private static List<MatOfPoint> verifyPatters(Mat mat, Mat adapThresh, List<MatOfPoint> patterns) {
+        List<MatOfPoint> patternsVer1 = new ArrayList<>();
+        List<MatOfPoint> patternsVer2 = new ArrayList<>();
+
         Mat imgH = new Mat();
         Mat imgV = new Mat();
+
         mat.copyTo(imgH);
         mat.copyTo(imgV);
 
@@ -219,12 +324,12 @@ public class MainActivity extends AppCompatActivity {
             boolean r3 = isClose((x2+x3)/2, x4/3, 2);
             boolean r4 = isClose((x5+x6)/2, x4/3, 2);
 
-            Imgproc.rectangle(imgH, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
-            Imgproc.rectangle(imgH, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
+//            Imgproc.rectangle(imgH, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
+//            Imgproc.rectangle(imgH, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
 
             if (r1 && r2 && r3 && r4) {
-                Imgproc.rectangle(imgV, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
-                Imgproc.rectangle(imgV, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
+//                Imgproc.rectangle(imgV, new Point(x, y), new Point(x + w, y), new Scalar(255, 0, 12), 3);
+//                Imgproc.rectangle(imgV, new Point(x, y0), new Point(x + w, y0 + h), new Scalar(36,255,12), 3);
                 patternsVer1.add(i);
             }
         }
@@ -263,129 +368,59 @@ public class MainActivity extends AppCompatActivity {
 
             if (r1 && r2 && r3 && r4) {
                 patternsVer2.add(i);
-                Imgproc.rectangle(imgV, new Point(x, y), new Point(x, y + h), new Scalar(12, 0, 255), 3);
-                Imgproc.rectangle(imgV, new Point(x0, y), new Point(x0 + w, y + h), new Scalar(36,255,12), 3);
+//                Imgproc.rectangle(imgV, new Point(x, y), new Point(x, y + h), new Scalar(12, 0, 255), 3);
+//                Imgproc.rectangle(imgV, new Point(x0, y), new Point(x0 + w, y + h), new Scalar(36,255,12), 3);
             }
 
         }
+        return patternsVer2;
+    }
 
-//        verify QR-Code ***************************************************************************
-        List<MatOfPoint> qrTemp = new ArrayList<>();
+    private static Boolean verifyCode(MatOfPoint code, List<MatOfPoint> patterns) {
+        boolean verified = false;
+        Rect QrRect = Imgproc.boundingRect(code);
 
-        for (MatOfPoint i:qrArr) {
-            Rect QrRect = Imgproc.boundingRect(i);
-
-            for (MatOfPoint j:patternsVer2) {
-                Rect PatternRect = Imgproc.boundingRect(j);
-                int xp = PatternRect.x + PatternRect.width/2;
-                int yp = PatternRect.y + PatternRect.height/2;
+        for (MatOfPoint j:patterns) {
+            Rect PatternRect = Imgproc.boundingRect(j);
+            int xp = PatternRect.x + PatternRect.width/2;
+            int yp = PatternRect.y + PatternRect.height/2;
 
 //                java.avt.Polygon();
-                boolean contain = QrRect.contains(new Point(xp, yp));
-                if (contain) {
-                    qrTemp.add(i);
-                }
+            boolean contain = QrRect.contains(new Point(xp, yp));
+            if (contain) {
+                verified = true;
             }
         }
 
-        Set<MatOfPoint> qrUni = new LinkedHashSet<>(qrTemp);
-        List<MatOfPoint> qrVerified = new ArrayList<>(qrUni);
+        return verified;
 //      TODO: Imgproc.rectangle -> show qr Code
+    }
 
-//        cut code *********************************************************************************
+    private static Mat cutAndTransform(Mat mat, MatOfPoint2f contour_) {
         Mat qrImg = new Mat(400, 400, mat.type());
-        if (qrVerified.size() == 1) {
-            MatOfPoint2f contour_ = new MatOfPoint2f();
-            qrVerified.get(0).convertTo(contour_, CvType.CV_32FC2);
 
-            RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
-            Point[] vertices = new Point[4];
-            rotatedRect.points(vertices);
-//            https://stackoverflow.com/a/36058630
-            Mat src = new MatOfPoint2f(vertices);
-            Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
+        RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
+        Point[] vertices = new Point[4];
+        rotatedRect.points(vertices);
+//        https://stackoverflow.com/a/36058630
+        Mat src = new MatOfPoint2f(vertices);
+        Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
 
-//            TODO: replace built-in function
-            Mat transform = Imgproc.getPerspectiveTransform(src, dst);
-            Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
-        } else {
-            mat.copyTo(qrImg);
-        }
+//        TODO: replace built-in function
+        Mat transform = Imgproc.getPerspectiveTransform(src, dst);
+        Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
 
-//        display images ***************************************************************************
-        ImageView grayImg = findViewById(R.id.gray);
-        Bitmap bmpGray = Bitmap.createBitmap(gray.cols(), gray.rows(), Bitmap.Config.RGB_565);
-        Utils.matToBitmap(gray, bmpGray);
-        grayImg.setImageBitmap(bmpGray);
-
-        ImageView gradImg = findViewById(R.id.grad);
-        Bitmap bmpGrad = Bitmap.createBitmap(grad.cols(), grad.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(grad, bmpGrad);
-        gradImg.setImageBitmap(bmpGrad);
-
-        ImageView connImg = findViewById(R.id.connected);
-        Bitmap bmpConn = Bitmap.createBitmap(connected.cols(), connected.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(connected, bmpConn);
-        connImg.setImageBitmap(bmpConn);
-
-        ImageView contoursImg = findViewById(R.id.contours);
-        Bitmap contoursBmp = Bitmap.createBitmap(img2.cols(), img2.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(img2, contoursBmp);
-        contoursImg.setImageBitmap(contoursBmp);
-
-        ImageView adapImg = findViewById(R.id.adapThreshold);
-        Bitmap adapBmp = Bitmap.createBitmap(adapThresh.cols(), adapThresh.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(adapThresh, adapBmp);
-        adapImg.setImageBitmap(adapBmp);
-
-        ImageView erodeImg = findViewById(R.id.erode);
-        Bitmap erodeBmp = Bitmap.createBitmap(edgesMat.cols(), edgesMat.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(edgesMat, erodeBmp);
-        erodeImg.setImageBitmap(erodeBmp);
-
-        ImageView threeImg = findViewById(R.id.img3);
-        Bitmap threeBmp = Bitmap.createBitmap(img3.cols(), img3.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(img3, threeBmp);
-        threeImg.setImageBitmap(threeBmp);
-
-        ImageView ImgHH = findViewById(R.id.imgH);
-        Bitmap BmpH = Bitmap.createBitmap(imgH.cols(), imgH.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(imgH, BmpH);
-        ImgHH.setImageBitmap(BmpH);
-
-        ImageView ImgVV = findViewById(R.id.imgV);
-        Bitmap BmpV = Bitmap.createBitmap(imgV.cols(), imgV.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(imgV, BmpV);
-        ImgVV.setImageBitmap(BmpV);
-
-        ImageView ImgQR = findViewById(R.id.qrimg);
-        Bitmap BmpQR = Bitmap.createBitmap(qrImg.cols(), qrImg.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(qrImg, BmpQR);
-        ImgQR.setImageBitmap(BmpQR);
-
-//        File path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-//        String filename = "teste.png";
-//        File file = new File(path, filename);
-//        filename = file.toString();
-//        Highgui.imwrite(filename, mRgba);
-//        MediaStore.Images.Media.insertImage(getContentResolver(), BmpH, "hello2" , "just some image");
-
-        Size sz = new Size(bmp.getWidth(), bmp.getHeight());
-        Imgproc.resize(qrImg, qrImg, sz);
-
-        Bitmap qrBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(qrImg, qrBmp);
-        return bmp;
+        return qrImg;
     }
 
     //    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
-    public static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
+    private static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
         MatOfPoint2f matFloat = new MatOfPoint2f();
         mat.convertTo(matFloat, CvType.CV_32FC2);
         return matFloat;
     }
 
-    private boolean isClose(float num1, float num2, float absolute) {
+    private static boolean isClose(float num1, float num2, float absolute) {
         float diff1 = num2/num1;
         float diff2 = num1/num2;
 //        https://stackoverflow.com/a/26740680
@@ -396,11 +431,14 @@ public class MainActivity extends AppCompatActivity {
         int[] ans = new int[2];
         int length = 0;
         int ret = 0;
-        while ((int)bin.get(posY, posX)[0] != change) {
-            length ++;
-            if (a.equals("x")) {posX ++;
-            } else if (a.equals("y")) {posY ++;}
-        }
+        // TODO: somehow sometimes the Mat is 0 -> nullPointerException, but I don't have time now to figure out why (DEC 12)
+        try {
+            while ((int)bin.get(posY, posX)[0] != change) {
+                length ++;
+                if (a.equals("x")) {posX ++;
+                } else if (a.equals("y")) {posY ++;}
+            }
+        } catch (Exception e) {e.printStackTrace();}
 
         if (a.equals("x")) {ret = posX;}
         else if (a.equals("y")) {ret = posY;}
