@@ -64,26 +64,35 @@ public class MainActivity extends AppCompatActivity {
     private void onClick(View view) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
-        startActivityForResult(intent, SELECT_CODE);
+
+        launchSomeActivity.launch(intent);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == SELECT_CODE && data!=null){
-            try {
-                bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), data.getData());
-                original_image = findViewById(R.id.originalImage);
-                original_image.setImageBitmap(bitmap);
+    ActivityResultLauncher<Intent> launchSomeActivity
+            = registerForActivityResult(
+            new ActivityResultContracts
+                    .StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    Intent data = result.getData();
+                    if (data != null && data.getData() != null) {
+                        Uri selectedImageUri = data.getData();
+                        Bitmap bitmap;
+                        try {
+                            bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImageUri);
 
-                bitmap = findCode(bitmap);
+                            original_image = findViewById(R.id.originalImage);
+                            original_image.setImageBitmap(bitmap);
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+                            bitmap = findCode(bitmap);
 
-    }
+                        }
+                        catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
 
     public static class qrCode {
         private boolean confirmed = false;
