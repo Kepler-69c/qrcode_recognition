@@ -8,6 +8,7 @@
     android:fillViewport="true">
 
     <LinearLayout
+        android:id="@+id/layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
@@ -29,75 +30,82 @@
             android:id="@+id/originalImage"
             android:contentDescription="@string/some_image" />
 
-        <ImageView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/gray"
-            android:contentDescription="@string/some_image" />
+            android:orientation="vertical"
+            android:id="@+id/imgLayout">
+        </LinearLayout>
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/grad"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/gray"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/connected"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/grad"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/contours"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/connected"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/adapThreshold"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/contours"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/erode"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/adapThreshold"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/img3"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/erode"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/imgH"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/img3"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/imgV"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/imgH"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_launcher_foreground"
-            android:id="@+id/qrimg"
-            android:contentDescription="@string/some_image" />
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/imgV"-->
+<!--            android:contentDescription="@string/some_image" />-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_launcher_foreground"-->
+<!--            android:id="@+id/qrimg"-->
+<!--            android:contentDescription="@string/some_image" />-->
 
     </LinearLayout>
 </ScrollView>
