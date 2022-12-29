@@ -40,8 +40,7 @@ public class MainActivity extends AppCompatActivity {
     Button select;
     Bitmap bitmap;
 
-    Mat grad, connected;
-
+//    load openCV, initialize onclick listener
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -62,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
         launchSomeActivity.launch(intent);
     }
 
+//    activity result launcher if an image is selected
     ActivityResultLauncher<Intent> launchSomeActivity
             = registerForActivityResult(
             new ActivityResultContracts
@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
                             clearView();
                             displayBitmap(bitmap);
 
+//                            check if the bitmap contains a qr code
                             Map.Entry<Boolean, Bitmap> returnEntry = findCode(bitmap);
                             Boolean qrFound = returnEntry.getKey();
                             Bitmap qrBmp = returnEntry.getValue();
@@ -95,11 +96,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+//    the class qrCode does all the image processing and its "confirmed" boolean shows if a qr-code was recognized
     public class qrCode {
 //        https://stackoverflow.com/a/18341560
         private final boolean confirmed;
-        private Mat initial;
-        private Bitmap bmp;
 
         private Mat makeGray(Mat mat) {
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
@@ -117,16 +117,12 @@ public class MainActivity extends AppCompatActivity {
             List<MatOfPoint> nPatterns = findPatterns(cut, adapThresh);
             List<MatOfPoint> vPatterns = verifyPatters(initial, adapThresh, nPatterns);
             confirmed = verifyCode(code, vPatterns);
-
-            if (confirmed) {
-                displayMat(cut);
-            }
         }
     }
 
-
+// method finds all possible qr codes and makes a qrCode-class for each one. returns result of search and cropped qr-code
     public Map.Entry<Boolean,Bitmap> findCode(Bitmap bmp) {
-//        initialize ********************************************************https://stackoverflow.com/a/46812543***********************
+//        https://stackoverflow.com/a/46812543
         Mat mat = new Mat();
         Utils.bitmapToMat(bmp, mat);
 
@@ -135,11 +131,11 @@ public class MainActivity extends AppCompatActivity {
 
         Mat gray = new Mat();
         Mat img2 = new Mat();
-        grad = new Mat();
-        connected = new Mat();
+        Mat grad = new Mat();
+        Mat connected = new Mat();
         mat.copyTo(img2);
 
-//        find QR code *****************************************************************************
+//        find QR code
         Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY);
 
         Mat kernel1 = Mat.ones(3,3, Imgproc.MORPH_ELLIPSE);
@@ -153,7 +149,8 @@ public class MainActivity extends AppCompatActivity {
         Mat hierarchy = new Mat();
         Imgproc.findContours(connected, qrArr, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
-        //https://www.tabnine.com/code/java/methods/org.opencv.imgproc.Imgproc/minAreaRect?snippet=5ce706c17e034400044022f7
+//        check each rectangle previously found
+//        https://www.tabnine.com/code/java/methods/org.opencv.imgproc.Imgproc/minAreaRect?snippet=5ce706c17e034400044022f7
         for (int i = 0; i < qrArr.size(); i++) {
             MatOfPoint2f contour_ = new MatOfPoint2f();
             qrArr.get(i).convertTo(contour_, CvType.CV_32FC2);
@@ -185,10 +182,10 @@ public class MainActivity extends AppCompatActivity {
         return simpleEntry;
     }
 
+//    void adds mat to the main layout of the app
     private void displayMat(Mat mat) {
 //        initialising new layout
         ImageView imageView = new ImageView(MainActivity.this);
-//        setContentView(R.layout.activity_main);
         LinearLayout layout = (LinearLayout)findViewById(R.id.imgLayout);
         LinearLayout.LayoutParams params = new LinearLayout
                 .LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -201,10 +198,10 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(imageView);
     }
 
+//    void adds bitmap to the main layout of the app
     private void displayBitmap(Bitmap bmp) {
         //        initialising new layout
         ImageView imageView = new ImageView(MainActivity.this);
-//        setContentView(R.layout.activity_main);
         LinearLayout layout = (LinearLayout)findViewById(R.id.imgLayout);
         LinearLayout.LayoutParams params = new LinearLayout
                 .LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -215,11 +212,13 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(imageView);
     }
 
+//    removes all items from the main layout of the app
     private void clearView() {
         LinearLayout layout = (LinearLayout) findViewById(R.id.imgLayout);
         layout.removeAllViews();
     }
 
+//    is used by the qrCode-class to find all possible position markers in the cropped image
     private static List<MatOfPoint> findPatterns(Mat mat, Mat adapThresh) {
         List<MatOfPoint> contourArr2 = new ArrayList<>();
         List<MatOfPoint> patterns = new ArrayList<>();
@@ -228,7 +227,8 @@ public class MainActivity extends AppCompatActivity {
         Mat img3 = new Mat();
         mat.copyTo(img3);
 
-        //        https://stackoverflow.com/a/14071387
+//        by eroding, the canny algorithm and finding contours, all small contiguous polygons are found
+//        https://stackoverflow.com/a/14071387
         int u = 0;
         Mat kernel3 = Mat.ones(5, 5, u);
         Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
@@ -237,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         Mat hierarchy2 = new Mat();
         Imgproc.findContours(edgesMat, contourArr2, hierarchy2, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
+//        filter: do the polygons have the right size and number of corners (4) to be position markers?
         for (MatOfPoint contour : contourArr2) {
             MatOfPoint2f contourFloat = toMatOfPointFloat(contour);
             double arcLen = Imgproc.arcLength(contourFloat, true) * 0.03;
@@ -259,6 +260,7 @@ public class MainActivity extends AppCompatActivity {
         return patterns;
     }
 
+//    used by the qr-code class to check the position markers obtained in the previous step for the correct black/white ratio
     private List<MatOfPoint> verifyPatters(Mat mat, Mat adapThresh, List<MatOfPoint> patterns) {
         List<MatOfPoint> patternsVer1 = new ArrayList<>();
         List<MatOfPoint> patternsVer2 = new ArrayList<>();
@@ -290,6 +292,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d("RECT_he", String.valueOf(n));
 */
 
+//            the middle vertical pixel row of the possible position marker is scrolled pixel by pixel
+//            the succession of black to white pixels must be proportional to 1:1:3:1:1
             if((int)adapThresh.get(y, x)[0] == 255) {
                 ans = arrayLoop(adapThresh, y, x0, "x", 0);
                 x1 = ans[0];x0 = ans[1];
@@ -321,6 +325,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+//        the position markers are checked again; this time vertically
+//        double-checking is necessary because qr-codes can be very distorted
         for (MatOfPoint i:patternsVer1) {
             Rect rect = Imgproc.boundingRect(i);
             int x0 = rect.x;
@@ -367,6 +373,7 @@ public class MainActivity extends AppCompatActivity {
         return patternsVer2;
     }
 
+//    is used by the qrCode class. checks if the qr-code contains position markers, i.e. is readable
     private static Boolean verifyCode(MatOfPoint code, List<MatOfPoint> patterns) {
         boolean verified = false;
         Rect QrRect = Imgproc.boundingRect(code);
@@ -387,6 +394,7 @@ public class MainActivity extends AppCompatActivity {
 //      TODO: Imgproc.rectangle -> show qr Code
     }
 
+//    rectifies and rotates the cropped qr-codes to make them rectangular
     private static Mat cutAndTransform(Mat mat, MatOfPoint2f contour_) {
         Mat qrImg = new Mat(400, 400, mat.type());
 
@@ -397,20 +405,22 @@ public class MainActivity extends AppCompatActivity {
         Mat src = new MatOfPoint2f(vertices);
         Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
 
-//        TODO: replace built-in function
+//        TODO: replace built-in method
         Mat transform = Imgproc.getPerspectiveTransform(src, dst);
         Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
 
         return qrImg;
     }
 
-    //    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
+//    method converts two MatOfPoint types into each other to bypass a limitation of OpenCV
+//    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
     private static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
         MatOfPoint2f matFloat = new MatOfPoint2f();
         mat.convertTo(matFloat, CvType.CV_32FC2);
         return matFloat;
     }
 
+//    compares the absolute difference between two numbers with a given value
     private static boolean isClose(float num1, float num2, float absolute) {
         float diff1 = num2/num1;
         float diff2 = num1/num2;
@@ -418,6 +428,7 @@ public class MainActivity extends AppCompatActivity {
         return Float.intBitsToFloat(Float.floatToIntBits(diff1 - diff2) & 0x7FFFFFFF) < absolute;
     }
 
+//    a part of the verifyPattern method. here a pixel row is iterated until the color changes
     private static int[] arrayLoop(Mat bin, int posY, int posX, String a, int change) {
         int[] ans = new int[2];
         int length = 0;
