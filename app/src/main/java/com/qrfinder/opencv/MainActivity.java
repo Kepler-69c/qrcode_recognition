@@ -30,14 +30,15 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     Button select;
     Bitmap bitmap;
-    ImageView original_image;
 
     Mat grad, connected;
 
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (OpenCVLoader.initDebug()) Log.d("LOADED", "SUCCESS");
+        if (OpenCVLoader.initDebug()) Log.d("LOADED OpenCV", "SUCCESS");
 
         select = findViewById(R.id.select);
         select.setOnClickListener(this::onClick);
@@ -71,12 +72,20 @@ public class MainActivity extends AppCompatActivity {
                     if (data != null && data.getData() != null) {
                         Uri selectedImageUri = data.getData();
                         try {
+                            if (OpenCVLoader.initDebug()) Log.d("LOADED Image", "SUCCESS");
+
                             bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImageUri);
 
-                            original_image = findViewById(R.id.originalImage);
-                            original_image.setImageBitmap(bitmap);
+                            clearView();
+                            displayBitmap(bitmap);
 
-                            findCode(bitmap);
+                            Map.Entry<Boolean, Bitmap> returnEntry = findCode(bitmap);
+                            Boolean qrFound = returnEntry.getKey();
+                            Bitmap qrBmp = returnEntry.getValue();
+
+                            if (qrFound) {
+                                displayBitmap(qrBmp);
+                            }
 
                         }
                         catch (IOException e) {
@@ -88,14 +97,9 @@ public class MainActivity extends AppCompatActivity {
 
     public class qrCode {
 //        https://stackoverflow.com/a/18341560
-        private boolean confirmed = false;
+        private final boolean confirmed;
         private Mat initial;
-        private Mat cut;
-        private final Mat gray, adapThresh;
         private Bitmap bmp;
-        private MatOfPoint code = new MatOfPoint();
-        private List<MatOfPoint> nPatterns = new ArrayList<>();
-        private List<MatOfPoint> vPatterns = new ArrayList<>();
 
         private Mat makeGray(Mat mat) {
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
@@ -108,29 +112,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public qrCode(Mat initial, Mat cut, MatOfPoint code) {
-            clearView();
-            this.cut = cut;
-            this.code = code;
-            this.gray = makeGray(cut);
-            this.adapThresh = aThresh(gray);
-            this.nPatterns = findPatterns(cut, adapThresh);
-            this.vPatterns = verifyPatters(initial, adapThresh, nPatterns);
-            this.confirmed = verifyCode(code, nPatterns);
+            Mat gray = makeGray(cut);
+            Mat adapThresh = aThresh(gray);
+            List<MatOfPoint> nPatterns = findPatterns(cut, adapThresh);
+            List<MatOfPoint> vPatterns = verifyPatters(initial, adapThresh, nPatterns);
+            confirmed = verifyCode(code, vPatterns);
 
             if (confirmed) {
                 displayMat(cut);
             }
         }
-
     }
 
 
-    public void findCode(Bitmap bmp) {
-//        initialize *******************************************************************************
+    public Map.Entry<Boolean,Bitmap> findCode(Bitmap bmp) {
+//        initialize ********************************************************https://stackoverflow.com/a/46812543***********************
         Mat mat = new Mat();
         Utils.bitmapToMat(bmp, mat);
 
         List<MatOfPoint> qrArr = new ArrayList<>();
+        boolean qrFound = false;
 
         Mat gray = new Mat();
         Mat img2 = new Mat();
@@ -165,10 +166,23 @@ public class MainActivity extends AppCompatActivity {
                 img2 = cutAndTransform(img2, contour_);
                 MatOfPoint code = qrArr.get(i);
                 qrCode qrcode = new qrCode(img2, cut, code);
+
+                if (qrcode.confirmed) {
+                    Bitmap cutBmp = Bitmap.createBitmap(cut.cols(), cut.rows(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(cut, cutBmp);
+
+                    bmp = cutBmp;
+                    qrFound = true;
+
+                    break;
+
+                }
             }
         }
 
-//        return bmp;
+//        https://stackoverflow.com/a/46812543
+        AbstractMap.SimpleEntry<Boolean, Bitmap> simpleEntry = new AbstractMap.SimpleEntry<>(qrFound, bmp);
+        return simpleEntry;
     }
 
     private void displayMat(Mat mat) {
@@ -180,14 +194,14 @@ public class MainActivity extends AppCompatActivity {
                 .LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
 
 //        create bitmap and add to View
-        Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);
+        Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.ARGB_8888);//Bitmap.Config.RGB_565
         Utils.matToBitmap(mat, bmp);
         imageView.setImageBitmap(bmp);
         imageView.setLayoutParams(params);
         layout.addView(imageView);
     }
 
-    private void displayRgbMat(Mat mat) {
+    private void displayBitmap(Bitmap bmp) {
         //        initialising new layout
         ImageView imageView = new ImageView(MainActivity.this);
 //        setContentView(R.layout.activity_main);
@@ -196,8 +210,6 @@ public class MainActivity extends AppCompatActivity {
                 .LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
 
 //        create bitmap and add to View
-        Bitmap bmp = Bitmap.createBitmap(mat.cols(), mat.rows(), Bitmap.Config.RGB_565);
-        Utils.matToBitmap(mat, bmp);
         imageView.setImageBitmap(bmp);
         imageView.setLayoutParams(params);
         layout.addView(imageView);
