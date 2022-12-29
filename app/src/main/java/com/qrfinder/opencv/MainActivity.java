@@ -98,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
 
 //    the class qrCode does all the image processing and its "confirmed" boolean shows if a qr-code was recognized
     public class qrCode {
-//        https://stackoverflow.com/a/18341560
         private final boolean confirmed;
 
         private Mat makeGray(Mat mat) {
@@ -122,7 +121,6 @@ public class MainActivity extends AppCompatActivity {
 
 // method finds all possible qr codes and makes a qrCode-class for each one. returns result of search and cropped qr-code
     public Map.Entry<Boolean,Bitmap> findCode(Bitmap bmp) {
-//        https://stackoverflow.com/a/46812543
         Mat mat = new Mat();
         Utils.bitmapToMat(bmp, mat);
 
@@ -150,7 +148,6 @@ public class MainActivity extends AppCompatActivity {
         Imgproc.findContours(connected, qrArr, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
 //        check each rectangle previously found
-//        https://www.tabnine.com/code/java/methods/org.opencv.imgproc.Imgproc/minAreaRect?snippet=5ce706c17e034400044022f7
         for (int i = 0; i < qrArr.size(); i++) {
             MatOfPoint2f contour_ = new MatOfPoint2f();
             qrArr.get(i).convertTo(contour_, CvType.CV_32FC2);
@@ -177,9 +174,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-//        https://stackoverflow.com/a/46812543
-        AbstractMap.SimpleEntry<Boolean, Bitmap> simpleEntry = new AbstractMap.SimpleEntry<>(qrFound, bmp);
-        return simpleEntry;
+        return new AbstractMap.SimpleEntry<>(qrFound, bmp);
     }
 
 //    void adds mat to the main layout of the app
@@ -228,7 +223,6 @@ public class MainActivity extends AppCompatActivity {
         mat.copyTo(img3);
 
 //        by eroding, the canny algorithm and finding contours, all small contiguous polygons are found
-//        https://stackoverflow.com/a/14071387
         int u = 0;
         Mat kernel3 = Mat.ones(5, 5, u);
         Imgproc.erode(adapThresh, erodeMat, kernel3, new Point(), 1);
@@ -280,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
             int y = y0 + rect.height/2;
             int w = rect.width;
             int h = rect.height;
-            float x1, x2, x3, x4, x5, x6;
+            float x2, x3, x4, x5, x6;
             int[] ans;
 /*
              -> how to get the value of a pixel in a Mat:
@@ -296,8 +290,8 @@ public class MainActivity extends AppCompatActivity {
 //            the succession of black to white pixels must be proportional to 1:1:3:1:1
             if((int)adapThresh.get(y, x)[0] == 255) {
                 ans = arrayLoop(adapThresh, y, x0, "x", 0);
-                x1 = ans[0];x0 = ans[1];
-            } else {x1 = 0;}
+                x0 = ans[1];
+            }
 
             ans = arrayLoop(adapThresh, y, x0, "x", 255);//black   1
             x2 = ans[0];x0 = ans[1];
@@ -308,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
             ans = arrayLoop(adapThresh, y, x0, "x", 0);//white     1
             x5 = ans[0];x0 = ans[1];
             ans = arrayLoop(adapThresh, y, x0, "x", 255);//black   1
-            x6 = ans[0];x0 = ans[1];
+            x6 = ans[0];
 
             boolean r1 = isClose(x2, x3, 2);
             boolean r2 = isClose(x5, x6, 2);
@@ -335,13 +329,13 @@ public class MainActivity extends AppCompatActivity {
             int y0 = y;
             int w = rect.width;
             int h = rect.height;
-            float y1, y2, y3, y4, y5, y6;
+            float y2, y3, y4, y5, y6;
             int[] ans;
 
             if((int)adapThresh.get(y, x)[0] == 255) {
                 ans = arrayLoop(adapThresh, y0, x, "y", 0);
-                y1 = ans[0];y0 = ans[1];
-            } else {y1 = 0;}
+                y0 = ans[1];
+            }
 
             ans = arrayLoop(adapThresh, y0, x, "y", 255);//black   1
             y2 = ans[0];y0 = ans[1];
@@ -352,7 +346,7 @@ public class MainActivity extends AppCompatActivity {
             ans = arrayLoop(adapThresh, y0, x, "y", 0);//white     1
             y5 = ans[0];y0 = ans[1];
             ans = arrayLoop(adapThresh, y0, x, "y", 255);//black   1
-            y6 = ans[0];y0 = ans[1];
+            y6 = ans[0];
 
             boolean r1 = isClose(y2, y3, 2);
             boolean r2 = isClose(y5, y6, 2);
@@ -391,7 +385,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return verified;
-//      TODO: Imgproc.rectangle -> show qr Code
     }
 
 //    rectifies and rotates the cropped qr-codes to make them rectangular
@@ -401,11 +394,9 @@ public class MainActivity extends AppCompatActivity {
         RotatedRect rotatedRect = Imgproc.minAreaRect(contour_);
         Point[] vertices = new Point[4];
         rotatedRect.points(vertices);
-//        https://stackoverflow.com/a/36058630
         Mat src = new MatOfPoint2f(vertices);
         Mat dst = new MatOfPoint2f(new Point(0, 0), new Point(qrImg.width() - 1, 0), new Point(qrImg.width() - 1, qrImg.height() - 1), new Point(0, qrImg.height() - 1));
-
-//        TODO: replace built-in method
+        
         Mat transform = Imgproc.getPerspectiveTransform(src, dst);
         Imgproc.warpPerspective(mat, qrImg, transform, qrImg.size());
 
@@ -413,7 +404,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 //    method converts two MatOfPoint types into each other to bypass a limitation of OpenCV
-//    https://github.com/Logicify/d2g-android-client/blob/master/app/src/main/java/app/logicify/com/imageprocessing/GeomUtils.java
     private static MatOfPoint2f toMatOfPointFloat(MatOfPoint mat) {
         MatOfPoint2f matFloat = new MatOfPoint2f();
         mat.convertTo(matFloat, CvType.CV_32FC2);
@@ -424,7 +414,6 @@ public class MainActivity extends AppCompatActivity {
     private static boolean isClose(float num1, float num2, float absolute) {
         float diff1 = num2/num1;
         float diff2 = num1/num2;
-//        https://stackoverflow.com/a/26740680
         return Float.intBitsToFloat(Float.floatToIntBits(diff1 - diff2) & 0x7FFFFFFF) < absolute;
     }
 
@@ -433,7 +422,6 @@ public class MainActivity extends AppCompatActivity {
         int[] ans = new int[2];
         int length = 0;
         int ret = 0;
-        // TODO: somehow sometimes the Mat is 0 -> nullPointerException, but I don't have time now to figure out why (DEC 12)
         try {
             while ((int)bin.get(posY, posX)[0] != change) {
                 length ++;
